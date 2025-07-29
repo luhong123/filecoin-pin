@@ -1,5 +1,7 @@
 # Filecoin Pin
 
+[![NPM](https://nodei.co/npm/filecoin-pin.svg?style=flat&data=n,v)](https://nodei.co/npm/filecoin-pin/)
+
 An IPFS Pinning Service API implementation that pins to Filecoin's PDP service, providing ongoing proof of possession of your pinned content using Filecoin's proving system.
 
 ## Overview
