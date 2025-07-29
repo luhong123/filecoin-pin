@@ -1,4 +1,4 @@
-import { unlink } from 'node:fs/promises'
+import { unlink, readFile } from 'node:fs/promises'
 import { EventEmitter } from 'node:events'
 import { join } from 'node:path'
 import { createPinningHeliaNode } from './create-pinning-helia.js'
@@ -7,6 +7,7 @@ import type { Config } from './config.js'
 import type { Helia } from 'helia'
 import type { CID } from 'multiformats/cid'
 import type { Logger } from 'pino'
+import type { SynapseService } from './synapse-service.js'
 
 export interface PinningServiceUser {
   id: string
@@ -37,6 +38,9 @@ export interface FilecoinPinMetadata {
   carStats: CARBlockstoreStats
   pinStarted: number
   pinCompleted?: number
+  synapseCommP?: string
+  synapseRootId?: number
+  synapseProofSetId?: string
 }
 
 export interface FilecoinStoredPinStatus extends StoredPinStatus {
@@ -46,6 +50,7 @@ export interface FilecoinStoredPinStatus extends StoredPinStatus {
 export interface FilecoinPinStoreInit {
   config: Config
   logger: Logger
+  synapseService: SynapseService
 }
 
 /**
@@ -54,6 +59,7 @@ export interface FilecoinPinStoreInit {
 export class FilecoinPinStore extends EventEmitter {
   private readonly config: Config
   private readonly logger: Logger
+  private readonly synapseService: SynapseService
   private readonly pins = new Map<string, FilecoinStoredPinStatus>()
   private readonly activePins = new Map<string, {
     helia: Helia
@@ -67,6 +73,7 @@ export class FilecoinPinStore extends EventEmitter {
     super()
     this.config = init.config
     this.logger = init.logger
+    this.synapseService = init.synapseService
   }
 
   async start (): Promise<void> {
@@ -276,6 +283,86 @@ export class FilecoinPinStore extends EventEmitter {
         missingBlocks: finalStats.missingBlocks.size
       }, 'CAR file finalized')
 
+      // Store on Filecoin
+      try {
+        // Read the CAR file (streaming not yet supported in Synapse)
+        const carData = await readFile(pinStatus.filecoin.carFilePath)
+
+        // Upload using Synapse
+        const synapseResult = await this.synapseService.storage.upload(carData, {
+          onUploadComplete: (commp) => {
+            this.logger.info({
+              event: 'synapse.upload.piece_uploaded',
+              pinId,
+              commp: commp.toString()
+            }, 'Upload to PDP server complete')
+          },
+          onRootAdded: (transaction) => {
+            if (transaction != null) {
+              this.logger.info({
+                event: 'synapse.upload.root_added',
+                pinId,
+                txHash: transaction.hash
+              }, 'Root addition transaction submitted')
+            } else {
+              this.logger.info({
+                event: 'synapse.upload.root_added',
+                pinId
+              }, 'Root added to proof set')
+            }
+          },
+          onRootConfirmed: (rootIds) => {
+            this.logger.info({
+              event: 'synapse.upload.root_confirmed',
+              pinId,
+              rootIds
+            }, 'Root addition confirmed on-chain')
+          }
+        })
+
+        // Store Synapse metadata
+        pinStatus.filecoin.synapseCommP = synapseResult.commp.toString()
+        if (synapseResult.rootId !== undefined) {
+          pinStatus.filecoin.synapseRootId = synapseResult.rootId
+        }
+        pinStatus.filecoin.synapseProofSetId = this.synapseService.storage.proofSetId
+
+        // Add to info for API response
+        pinStatus.info = {
+          ...pinStatus.info,
+          synapse_commp: synapseResult.commp.toString(),
+          synapse_root_id: (synapseResult.rootId ?? 0).toString(),
+          synapse_proof_set_id: this.synapseService.storage.proofSetId
+        }
+
+        this.logger.info({
+          event: 'synapse.upload.success',
+          pinId,
+          commp: synapseResult.commp,
+          rootId: synapseResult.rootId,
+          proofSetId: this.synapseService.storage.proofSetId
+        }, 'Successfully uploaded to Filecoin with Synapse')
+      } catch (error) {
+        // Rollback on Synapse failure
+        this.logger.error({
+          event: 'synapse.upload.failed',
+          pinId,
+          error
+        }, 'Failed to upload to Filecoin with Synapse, rolling back')
+
+        // Clean up the CAR file
+        try {
+          await blockstore.cleanup()
+          await unlink(pinStatus.filecoin.carFilePath)
+          this.logger.info({ pinId, carFilePath: pinStatus.filecoin.carFilePath }, 'Deleted CAR file after Synapse failure')
+        } catch (cleanupError) {
+          this.logger.warn({ pinId, error: cleanupError }, 'Failed to clean up CAR file')
+        }
+
+        // Re-throw to mark pin as failed
+        throw new Error(`Synapse upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+
       // Update pin status to completed
       pinStatus.status = 'pinned'
       pinStatus.filecoin.carStats = finalStats
@@ -298,13 +385,6 @@ export class FilecoinPinStore extends EventEmitter {
         stats: finalStats,
         carFilePath: pinStatus.filecoin.carFilePath
       })
-
-      // CAR file is ready for upload to Filecoin when needed
-      this.logger.info({
-        pinId,
-        cid: cid.toString(),
-        carFilePath: pinStatus.filecoin.carFilePath
-      }, 'CAR file ready for Filecoin upload')
 
       this.logger.info({ pinId, cid: cid.toString() }, 'Pin processing completed successfully')
     } catch (error) {

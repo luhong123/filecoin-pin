@@ -8,17 +8,31 @@
   "bin": {
     "filecoin-pin": "dist/cli.js"
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts.map",
+    "src/**/*.ts",
+    "README.md",
+    "LICENSE.md"
+  ],
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
-    "test": "npm run typecheck && npm run test:unit && npm run test:e2e",
-    "test:unit": "vitest run test/unit",
-    "test:e2e": "vitest run test/e2e",
+    "dev": "tsx watch src/cli.ts daemon",
+    "start": "node dist/cli.js daemon",
+    "test": "npm run lint && npm run typecheck && npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run src/test/unit",
+    "test:integration": "vitest run src/test/integration",
     "test:watch": "vitest",
     "lint": "ts-standard 'src/**/*.ts'",
     "lint:fix": "ts-standard 'src/**/*.ts' --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FilOzone/filecoin-pin.git"
   },
   "keywords": [
     "ipfs",
@@ -29,10 +43,12 @@
   ],
   "author": "Rod Vagg <rod@vagg.org>",
   "license": "Apache-2.0 OR MIT",
-  "engines": {
-    "node": ">=24.0.0"
+  "bugs": {
+    "url": "https://github.com/FilOzone/filecoin-pin/issues"
   },
+  "homepage": "https://github.com/FilOzone/filecoin-pin#readme",
   "dependencies": {
+    "@filoz/synapse-sdk": "^0.20.0",
     "@ipld/car": "^5.4.2",
     "fastify": "^5.4.0",
     "helia": "^5.5.0",
@@ -47,5 +63,8 @@
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

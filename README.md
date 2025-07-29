@@ -6,6 +6,18 @@ An IPFS Pinning Service API implementation that pins to Filecoin's PDP service, 
 
 Filecoin Pin is a TypeScript daemon that implements the [IPFS Pinning Service API](https://ipfs.github.io/pinning-services-api-spec/) to enable users to pin IPFS content to Filecoin using familiar IPFS tooling like Kubo's `ipfs pin remote` commands.
 
+### How It Works
+
+1. **Serve Pin Service**: The daemon runs an HTTP server that implements the IPFS Pinning Service API
+2. **Receive Pin Requests**: When you run `ipfs pin remote add`, Kubo sends a pin request to the service
+3. **Fetch Blocks from IPFS**: The service connects to the IPFS network and fetches blocks for the requested CID (usually from the requesting node itself)
+4. **Store in CAR**: As blocks arrive, they're written directly to a CAR (Content Addressable aRchive) file on disk
+5. **Upload to PDP Provider**: Once all blocks are collected, the CAR file is uploaded to a Proof of Data Possession (PDP) service provider
+6. **Commit to Filecoin**: The PDP provider commits the data to the Filecoin blockchain
+7. **Start Proving**: The storage provider begins generating ongoing proofs that they still possess your data
+
+This bridges the gap between IPFS's content-addressed storage and Filecoin's incentivized persistence layer, giving you the best of both worlds - easy pinning with long-term storage guarantees.
+
 **⚠️ Alpha Software**: This is currently alpha software, only deploying on Filecoin's Calibration Test network with storage providers participating in network testing, not dedicating long-term persistence.
 
 You need a Filecoin calibration network wallet funded with USDFC. See the [USDFC documentation](https://docs.secured.finance/usdfc-stablecoin/getting-started) which has a "Testnet Resources" section for getting USDFC on calibnet.
@@ -48,8 +60,8 @@ Configuration is managed through environment variables. The service uses platfor
 #### Environment Variables
 
 ```bash
-# Required for Filecoin operations
-export PRIVATE_KEY="your-filecoin-private-key"      # Ethereum private key (must be funded with USDFC)
+# REQUIRED - Without this, the service will not start
+export PRIVATE_KEY="your-filecoin-private-key"      # Ethereum private key (must be funded with USDFC on calibration network)
 
 # Optional configuration with defaults
 export PORT=3456                                    # API server port (default: 3456)
@@ -71,12 +83,14 @@ When `DATABASE_PATH` and `CAR_STORAGE_PATH` are not specified, the service uses 
 
 ### Running the Daemon
 
+⚠️ **PRIVATE_KEY is required** - The service will not start without it.
+
 ```bash
 # Start the daemon
-npm start
+PRIVATE_KEY=0x... npm start
 
 # Or with custom configuration
-PORT=8080 npm start
+PRIVATE_KEY=0x... PORT=8080 RPC_URL=wss://... npm start
 ```
 
 ### CLI Usage
@@ -115,9 +129,11 @@ ipfs pin remote ls --service=filecoin-pin --status=pinning,queued,pinned
 - `npm run build` - Compile TypeScript to JavaScript
 - `npm run dev` - Start development server with hot reload
 - `npm start` - Run compiled output
-- `npm test` - Run tests with type checking
+- `npm test` - Run linting, type checking, unit tests, and integration tests
+- `npm run test:unit` - Run unit tests only
+- `npm run test:integration` - Run integration tests only
 - `npm run test:watch` - Run tests in watch mode
-- `npm run lint` - Check code style
+- `npm run lint` - Check code style with ts-standard
 - `npm run lint:fix` - Auto-fix code style issues
 - `npm run typecheck` - Type check without emitting files
 

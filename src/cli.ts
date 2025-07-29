@@ -23,17 +23,18 @@ Usage:
   filecoin-pin help      Show this help message
 
 Environment Variables:
-  PORT                   API server port (default: 3456)
-  HOST                   API server host (default: localhost)
-  PRIVATE_KEY           Ethereum private key for Filecoin transactions
+  PRIVATE_KEY           Private key for Filecoin transactions (required)
+  PORT                  API server port (default: 3456)
+  HOST                  API server host (default: localhost)
   RPC_URL               Filecoin RPC endpoint (default: calibration testnet)
-  DATABASE_PATH         SQLite database location (default: ./pins.db)
-  CAR_STORAGE_PATH      Temporary CAR file directory (default: ./cars)
+  DATABASE_PATH         SQLite database location (default: {config}/pins.db)
+  CAR_STORAGE_PATH      Temporary CAR file directory (default: {config}/cars)
   LOG_LEVEL             Log level (default: info)
+  PANDORA_ADDRESS       Override Pandora contract address (optional)
 
-Example:
-  filecoin-pin daemon
-  PORT=8080 PRIVATE_KEY=0x... filecoin-pin daemon
+Examples:
+  PRIVATE_KEY=0x... filecoin-pin daemon
+  PORT=8080 PRIVATE_KEY=0x... RPC_URL=wss://... filecoin-pin daemon
 `)
 }
 

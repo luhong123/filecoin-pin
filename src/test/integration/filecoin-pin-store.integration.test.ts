@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { FilecoinPinStore } from '../../filecoin-pin-store.js'
@@ -8,6 +8,10 @@ import { createHelia } from 'helia'
 import { CID } from 'multiformats/cid'
 import { sha256 } from 'multiformats/hashes/sha2'
 import * as raw from 'multiformats/codecs/raw'
+import { MockSynapse } from '../mocks/synapse-mocks.js'
+
+// Mock the Synapse SDK
+vi.mock('@filoz/synapse-sdk', async () => await import('../mocks/synapse-sdk.js'))
 
 describe('FilecoinPinStore', () => {
   let pinStore: FilecoinPinStore
@@ -25,20 +29,27 @@ describe('FilecoinPinStore', () => {
 
     testUser = { id: 'test-user', name: 'Test User' }
 
-    // Create test config with output directory
+    // Create test config with output directory and fake private key
     const config = {
       ...createConfig(),
-      carStoragePath: testOutputDir
+      carStoragePath: testOutputDir,
+      privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
     }
     const logger = createLogger(config)
 
     // Create a Helia node to serve content
     contentOriginHelia = await createHelia()
 
-    // Create Filecoin pin store
+    // Create mock Synapse service
+    const mockSynapse = new MockSynapse()
+    const mockStorage = await mockSynapse.createStorage()
+    const synapseService = { synapse: mockSynapse as any, storage: mockStorage }
+
+    // Create Filecoin pin store with mock Synapse
     pinStore = new FilecoinPinStore({
       config,
-      logger
+      logger,
+      synapseService
     })
 
     await pinStore.start()
@@ -274,9 +285,20 @@ describe('FilecoinPinStore', () => {
 
   describe('Pin Store Lifecycle', () => {
     it('should start and stop cleanly', async () => {
+      // Create mock Synapse service
+      const mockSynapse = new MockSynapse()
+      const mockStorage = await mockSynapse.createStorage()
+      const synapseService = { synapse: mockSynapse as any, storage: mockStorage }
+
+      const config = {
+        ...createConfig(),
+        privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
+      }
+
       const newPinStore = new FilecoinPinStore({
-        config: createConfig(),
-        logger: createLogger(createConfig())
+        config,
+        logger: createLogger(config),
+        synapseService
       })
 
       await expect(newPinStore.start()).resolves.not.toThrow()
@@ -284,9 +306,20 @@ describe('FilecoinPinStore', () => {
     })
 
     it('should handle multiple start/stop cycles', async () => {
+      // Create mock Synapse service
+      const mockSynapse = new MockSynapse()
+      const mockStorage = await mockSynapse.createStorage()
+      const synapseService = { synapse: mockSynapse as any, storage: mockStorage }
+
+      const config = {
+        ...createConfig(),
+        privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
+      }
+
       const newPinStore = new FilecoinPinStore({
-        config: createConfig(),
-        logger: createLogger(createConfig())
+        config,
+        logger: createLogger(config),
+        synapseService
       })
 
       await newPinStore.start()

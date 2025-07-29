@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { FilecoinPinStore } from '../../filecoin-pin-store.js'
 import { createConfig } from '../../config.js'
 import { createLogger } from '../../logger.js'
@@ -8,6 +8,10 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import * as raw from 'multiformats/codecs/raw'
 import { rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { MockSynapse } from '../mocks/synapse-mocks.js'
+
+// Mock the Synapse SDK
+vi.mock('@filoz/synapse-sdk', async () => await import('../mocks/synapse-sdk.js'))
 
 describe('Simple Pin Test', () => {
   let pinStore: FilecoinPinStore
@@ -22,10 +26,11 @@ describe('Simple Pin Test', () => {
     const hash = await sha256.digest(testBlock)
     testCID = CID.create(1, raw.code, hash)
 
-    // Create test config
+    // Create test config with test private key
     const config = {
       ...createConfig(),
-      carStoragePath: testOutputDir
+      carStoragePath: testOutputDir,
+      privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
     }
     const logger = createLogger(config)
 
@@ -33,10 +38,16 @@ describe('Simple Pin Test', () => {
     contentOriginHelia = await createHelia()
     await contentOriginHelia.blockstore.put(testCID, testBlock)
 
-    // Create Filecoin pin store
+    // Create mock Synapse service
+    const mockSynapse = new MockSynapse()
+    const mockStorage = await mockSynapse.createStorage()
+    const synapseService = { synapse: mockSynapse as any, storage: mockStorage }
+
+    // Create Filecoin pin store with mock Synapse
     pinStore = new FilecoinPinStore({
       config,
-      logger
+      logger,
+      synapseService
     })
 
     await pinStore.start()

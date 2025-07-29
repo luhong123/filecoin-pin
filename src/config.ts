@@ -9,6 +9,7 @@ export interface Config {
   databasePath: string
   carStoragePath: string
   logLevel: string
+  pandoraAddress: string | undefined
 }
 
 function getDataDirectory (): string {
@@ -44,6 +45,7 @@ export function createConfig (): Config {
     rpcUrl: process.env.RPC_URL ?? 'https://api.calibration.node.glif.io/rpc/v1',
     databasePath: process.env.DATABASE_PATH ?? join(dataDir, 'pins.db'),
     carStoragePath: process.env.CAR_STORAGE_PATH ?? join(dataDir, 'cars'),
-    logLevel: process.env.LOG_LEVEL ?? 'info'
+    logLevel: process.env.LOG_LEVEL ?? 'info',
+    pandoraAddress: process.env.PANDORA_ADDRESS
   }
 }

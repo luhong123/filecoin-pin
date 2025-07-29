@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { rm, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { CarReader } from '@ipld/car'
@@ -18,6 +18,9 @@ import { tcp } from '@libp2p/tcp'
 import { identify } from '@libp2p/identify'
 import { MemoryBlockstore } from 'blockstore-core'
 import { MemoryDatastore } from 'datastore-core'
+
+// Mock the Synapse SDK
+vi.mock('@filoz/synapse-sdk', async () => await import('../mocks/synapse-sdk.js'))
 
 // Type for API responses
 interface PinResponse {
@@ -43,11 +46,12 @@ describe('End-to-End Pinning Service', () => {
   const testOutputDir = './test-e2e-cars'
 
   beforeEach(async () => {
-    // Create test config
+    // Create test config with test private key
     const config = {
       ...createConfig(),
       carStoragePath: testOutputDir,
-      port: 0 // Use random port
+      port: 0, // Use random port
+      privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
     }
     const logger = createLogger(config)
 

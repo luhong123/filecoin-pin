@@ -6,6 +6,12 @@ import { CID } from 'multiformats/cid'
 import { sha256 } from 'multiformats/hashes/sha2'
 import * as raw from 'multiformats/codecs/raw'
 
+// Mock Synapse service - minimal mock since unit tests don't test background processing
+const mockSynapseService = {
+  synapse: {} as any,
+  storage: {} as any
+}
+
 // Mock the heavy dependencies
 vi.mock('../../create-pinning-helia.js', () => ({
   createPinningHeliaNode: vi.fn().mockResolvedValue({
@@ -54,14 +60,16 @@ describe('FilecoinPinStore (Unit)', () => {
     // Create test config
     const config = {
       ...createConfig(),
-      carStoragePath: './test-output'
+      carStoragePath: './test-output',
+      privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
     }
     const logger = createLogger(config)
 
     // Create pin store
     pinStore = new FilecoinPinStore({
       config,
-      logger
+      logger,
+      synapseService: mockSynapseService
     })
 
     await pinStore.start()
@@ -152,9 +160,15 @@ describe('FilecoinPinStore (Unit)', () => {
 
   describe('Lifecycle', () => {
     it('should handle start/stop', async () => {
+      const config = {
+        ...createConfig(),
+        privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001' // Fake test key
+      }
+
       const newPinStore = new FilecoinPinStore({
-        config: createConfig(),
-        logger: createLogger(createConfig())
+        config,
+        logger: createLogger(config),
+        synapseService: mockSynapseService
       })
 
       await expect(newPinStore.start()).resolves.not.toThrow()
