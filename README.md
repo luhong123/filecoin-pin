@@ -32,27 +32,35 @@ Node.js 24+ and npm
 
 ### Installation
 
+You can install `filecoin-pin` globally or use it directly with npx.
+
+⚠️ **Note**: You'll need to set the `PRIVATE_KEY` environment variable before running - see [Configuration](#configuration) below.
+
+**Option 1: Install globally (then run from anywhere)**
 ```bash
+# First install it globally (one time)
+npm install -g filecoin-pin
+
+# Then you can run it from anywhere
+filecoin-pin daemon
+```
+
+**Option 2: Use npx (installs automatically and runs)**
+```bash
+# No installation needed - npx downloads and runs it
+npx filecoin-pin daemon
+```
+
+**Option 3: Build from source**
+```bash
+# Clone and build
 git clone https://github.com/FilOzone/filecoin-pin
 cd filecoin-pin
 npm install
-```
-
-### Development
-
-```bash
-# Start development server with hot reload
-npm run dev
-
-# Build the project
 npm run build
 
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-npm run lint:fix
+# Run it
+npm start
 ```
 
 ### Configuration
@@ -88,24 +96,27 @@ When `DATABASE_PATH` and `CAR_STORAGE_PATH` are not specified, the service uses 
 ⚠️ **PRIVATE_KEY is required** - The service will not start without it.
 
 ```bash
-# Start the daemon
-PRIVATE_KEY=0x... npm start
+# If installed globally:
+PRIVATE_KEY=0x... filecoin-pin daemon
 
-# Or with custom configuration
-PRIVATE_KEY=0x... PORT=8080 RPC_URL=wss://... npm start
+# Or with npx:
+PRIVATE_KEY=0x... npx filecoin-pin daemon
+
+# With custom configuration:
+PRIVATE_KEY=0x... PORT=8080 RPC_URL=wss://... filecoin-pin daemon
 ```
 
 ### CLI Usage
 
 ```bash
 # Show help
-npx filecoin-pin help
+filecoin-pin help
 
 # Show version
-npx filecoin-pin version
+filecoin-pin version
 
 # Start server
-npx filecoin-pin daemon
+filecoin-pin daemon
 ```
 
 ## Using with IPFS/Kubo
@@ -126,11 +137,30 @@ ipfs pin remote ls --service=filecoin-pin
 ipfs pin remote ls --service=filecoin-pin --status=pinning,queued,pinned
 ```
 
-## Development Scripts
+## Development
+
+For developers who want to contribute or build from source:
+
+```bash
+# Clone the repository
+git clone https://github.com/FilOzone/filecoin-pin
+cd filecoin-pin
+
+# Install dependencies
+npm install
+
+# Start development server with hot reload
+npm run dev
+
+# Run tests
+npm test
+```
+
+### Development Scripts
 
 - `npm run build` - Compile TypeScript to JavaScript
 - `npm run dev` - Start development server with hot reload
-- `npm start` - Run compiled output
+- `npm start` - Run compiled output (after building)
 - `npm test` - Run linting, type checking, unit tests, and integration tests
 - `npm run test:unit` - Run unit tests only
 - `npm run test:integration` - Run integration tests only
