@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         if: ${{ steps.release.outputs.release_created }}
-        run: npm ci
+        run: npm install
 
       - name: Build
         if: ${{ steps.release.outputs.release_created }}
