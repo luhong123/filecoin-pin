@@ -8,6 +8,7 @@
       "draft": false,
       "prerelease": false,
       "include-v-in-tag": true,
+      "include-component-in-tag": false,
       "always-bump-patch": true,
       "bootstrap-sha": "70e3c175e69c54fe5a503bfbb34f4a68f6d646fe"
     }
