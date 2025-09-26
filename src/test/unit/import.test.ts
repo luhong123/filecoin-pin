@@ -33,6 +33,33 @@ vi.mock('../../synapse/payments.js', () => ({
     hasSufficientGas: true,
   }),
   checkUSDFCBalance: vi.fn().mockResolvedValue(1000000000000000000000n), // 1000 USDFC
+  checkAllowances: vi.fn().mockResolvedValue({
+    needsUpdate: false,
+    currentAllowances: {
+      rateAllowance: BigInt('0xffffffffffffffff'), // 2^64 - 1 (max)
+      lockupAllowance: BigInt('0xffffffffffffffff'), // 2^64 - 1 (max)
+      rateUsed: 0n,
+      lockupUsed: 0n,
+    },
+  }),
+  setMaxAllowances: vi.fn().mockResolvedValue({
+    transactionHash: '0x123...',
+    currentAllowances: {
+      rateAllowance: BigInt('0xffffffffffffffff'), // 2^64 - 1 (max)
+      lockupAllowance: BigInt('0xffffffffffffffff'), // 2^64 - 1 (max)
+      rateUsed: 0n,
+      lockupUsed: 0n,
+    },
+  }),
+  checkAndSetAllowances: vi.fn().mockResolvedValue({
+    updated: false,
+    currentAllowances: {
+      rateAllowance: BigInt('0xffffffffffffffff'), // 2^64 - 1 (max)
+      lockupAllowance: BigInt('0xffffffffffffffff'), // 2^64 - 1 (max)
+      rateUsed: 0n,
+      lockupUsed: 0n,
+    },
+  }),
   validatePaymentCapacity: vi.fn().mockResolvedValue({
     canUpload: true,
     storageTiB: 0.001,
