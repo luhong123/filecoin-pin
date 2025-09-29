@@ -282,6 +282,26 @@ export async function depositUSDFC(
 }
 
 /**
+ * Withdraw USDFC from the Payments contract back to the wallet
+ *
+ * Example usage:
+ * ```typescript
+ * const amountToWithdraw = ethers.parseUnits('10', 18) // 10 USDFC
+ * const txHash = await withdrawUSDFC(synapse, amountToWithdraw)
+ * console.log(`Withdraw transaction: ${txHash}`)
+ * ```
+ *
+ * @param synapse - Initialized Synapse instance
+ * @param amount - Amount to withdraw in USDFC (with decimals)
+ * @returns Transaction hash for the withdrawal
+ */
+export async function withdrawUSDFC(synapse: Synapse, amount: bigint): Promise<string> {
+  const tx = await synapse.payments.withdraw(amount, TOKENS.USDFC)
+  await tx.wait()
+  return tx.hash
+}
+
+/**
  * Set service approvals for WarmStorage operator
  *
  * This authorizes the WarmStorage contract to create payment rails on behalf
@@ -516,6 +536,137 @@ export function calculateStorageFromUSDFC(usdfcAmount: bigint, pricePerTiBPerEpo
   const ratePerEpoch = usdfcAmount / epochsIn10Days
 
   return calculateActualCapacity(ratePerEpoch, pricePerTiBPerEpoch)
+}
+
+/**
+ * Compute the additional deposit required to fund current usage for a duration.
+ *
+ * The WarmStorage service maintains ~10 days of lockup (lockupUsed) and draws future
+ * lockups from the available deposit (deposited - lockupUsed). To keep the current
+ * rails alive for N days, ensure available >= N days of spend at the current rateUsed.
+ *
+ * @param status - Current payment status (from getPaymentStatus)
+ * @param days - Number of days to keep the current usage funded
+ * @returns Breakdown of required top-up and related values
+ */
+export function computeTopUpForDuration(
+  status: PaymentStatus,
+  days: number
+): {
+  topUp: bigint
+  available: bigint
+  rateUsed: bigint
+  perDay: bigint
+  lockupUsed: bigint
+} {
+  const rateUsed = status.currentAllowances.rateUsed ?? 0n
+  const lockupUsed = status.currentAllowances.lockupUsed ?? 0n
+
+  if (days <= 0) {
+    return {
+      topUp: 0n,
+      available: status.depositedAmount > lockupUsed ? status.depositedAmount - lockupUsed : 0n,
+      rateUsed,
+      perDay: rateUsed * TIME_CONSTANTS.EPOCHS_PER_DAY,
+      lockupUsed,
+    }
+  }
+
+  if (rateUsed === 0n) {
+    return {
+      topUp: 0n,
+      available: status.depositedAmount > lockupUsed ? status.depositedAmount - lockupUsed : 0n,
+      rateUsed,
+      perDay: 0n,
+      lockupUsed,
+    }
+  }
+
+  const epochsNeeded = BigInt(Math.ceil(days)) * TIME_CONSTANTS.EPOCHS_PER_DAY
+  const spendNeeded = rateUsed * epochsNeeded
+  const available = status.depositedAmount > lockupUsed ? status.depositedAmount - lockupUsed : 0n
+
+  const topUp = spendNeeded > available ? spendNeeded - available : 0n
+
+  return {
+    topUp,
+    available,
+    rateUsed,
+    perDay: rateUsed * TIME_CONSTANTS.EPOCHS_PER_DAY,
+    lockupUsed,
+  }
+}
+
+/**
+ * Compute the exact adjustment (deposit or withdraw) needed to set runway to `days`.
+ *
+ * Positive result indicates a deposit is needed; negative indicates a withdrawal is possible.
+ */
+export function computeAdjustmentForExactDays(
+  status: PaymentStatus,
+  days: number
+): {
+  delta: bigint // >0 deposit, <0 withdraw, 0 none
+  targetAvailable: bigint
+  available: bigint
+  rateUsed: bigint
+  perDay: bigint
+  lockupUsed: bigint
+} {
+  const rateUsed = status.currentAllowances.rateUsed ?? 0n
+  const lockupUsed = status.currentAllowances.lockupUsed ?? 0n
+  const available = status.depositedAmount > lockupUsed ? status.depositedAmount - lockupUsed : 0n
+  const perDay = rateUsed * TIME_CONSTANTS.EPOCHS_PER_DAY
+
+  if (days < 0) {
+    throw new Error('days must be non-negative')
+  }
+  if (rateUsed === 0n) {
+    return {
+      delta: 0n,
+      targetAvailable: 0n,
+      available,
+      rateUsed,
+      perDay,
+      lockupUsed,
+    }
+  }
+
+  // Safety buffer to ensure runway >= requested days even if rateUsed shifts slightly.
+  // Use a 1-hour buffer by default.
+  const perHour = perDay / 24n
+  const safety = perHour > 0n ? perHour : 1n
+  const targetAvailable = BigInt(Math.floor(days)) * perDay + safety
+  const delta = targetAvailable - available
+
+  return {
+    delta,
+    targetAvailable,
+    available,
+    rateUsed,
+    perDay,
+    lockupUsed,
+  }
+}
+
+/**
+ * Compute the exact adjustment (deposit or withdraw) to reach a target absolute deposit.
+ *
+ * Clamps to not withdraw below the currently locked amount.
+ */
+export function computeAdjustmentForExactDeposit(
+  status: PaymentStatus,
+  targetDeposit: bigint
+): {
+  delta: bigint // >0 deposit, <0 withdraw, 0 none
+  clampedTarget: bigint
+  lockupUsed: bigint
+} {
+  if (targetDeposit < 0n) throw new Error('target deposit cannot be negative')
+  const lockupUsed = status.currentAllowances.lockupUsed ?? 0n
+  const clampedTarget = targetDeposit < lockupUsed ? lockupUsed : targetDeposit
+  const delta = clampedTarget - status.depositedAmount
+  return { delta, clampedTarget, lockupUsed }
 }
 
 /**

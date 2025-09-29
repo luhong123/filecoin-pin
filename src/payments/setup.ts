@@ -18,6 +18,7 @@ import {
   getPaymentStatus,
   getStorageScale,
   setServiceApprovals,
+  withdrawUSDFC,
 } from '../synapse/payments.js'
 import { log } from '../utils/cli-logger.js'
 
@@ -29,6 +30,7 @@ export {
   checkFILBalance,
   checkUSDFCBalance,
   depositUSDFC,
+  withdrawUSDFC,
   getPaymentStatus,
   setServiceApprovals,
 }
