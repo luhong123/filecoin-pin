@@ -1,13 +1,12 @@
 import type { Synapse } from '@filoz/synapse-sdk'
+import type { CLIAuthOptions } from '../utils/cli-auth.js'
 import type { Spinner } from '../utils/cli-helpers.js'
 
 // Re-export payment types from the core module
 export type { PaymentStatus, StorageAllowances } from '../core/payments/index.js'
 
-export interface PaymentSetupOptions {
+export interface PaymentSetupOptions extends CLIAuthOptions {
   auto: boolean
-  privateKey?: string
-  rpcUrl?: string
   deposit: string
   rateAllowance: string
 }
@@ -40,9 +39,7 @@ export interface FundingAdjustmentResult {
 
 export type FundMode = 'exact' | 'minimum'
 
-export interface FundOptions {
-  privateKey?: string
-  rpcUrl?: string
+export interface FundOptions extends CLIAuthOptions {
   days?: number
   amount?: string
   /**
