@@ -29,7 +29,7 @@ describe('synapse-service', () => {
       privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001', // Fake test key
       rpcUrl: 'wss://wss.calibration.node.glif.io/apigw/lotus/rpc/v1',
     }
-    logger = createLogger(config)
+    logger = createLogger({ logLevel: 'info' })
 
     // Reset the service instances
     resetSynapseService()
@@ -41,11 +41,10 @@ describe('synapse-service', () => {
   })
 
   describe('setupSynapse', () => {
-    it('should throw error when private key is not configured', async () => {
-      // @ts-expect-error - private key is required
+    it('should throw error when no authentication is provided', async () => {
       config.privateKey = undefined
 
-      await expect(setupSynapse(config, logger)).rejects.toThrow('PRIVATE_KEY environment variable is required')
+      await expect(setupSynapse(config, logger)).rejects.toThrow('Authentication required')
     })
 
     it('should initialize Synapse when private key is configured', async () => {
@@ -64,15 +63,16 @@ describe('synapse-service', () => {
       // Check that initialization logs were called
       expect(infoSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          hasPrivateKey: true,
+          event: 'synapse.init',
+          authMode: 'standard',
           rpcUrl: config.rpcUrl,
         }),
-        'Initializing Synapse'
+        'Initializing Synapse SDK'
       )
 
       expect(infoSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ event: 'synapse.init' }),
-        'Initializing Synapse SDK'
+        expect.objectContaining({ event: 'synapse.init.success' }),
+        'Synapse SDK initialized'
       )
     })
 
@@ -191,11 +191,6 @@ describe('synapse-service', () => {
       const mockConfig: SynapseSetupConfig = {
         privateKey: 'test-private-key',
         rpcUrl: 'wss://wss.calibration.node.glif.io/apigw/lotus/rpc/v1',
-        port: 3000,
-        host: '127.0.0.1',
-        databasePath: ':memory:',
-        carStoragePath: './cars',
-        logLevel: 'info',
       }
 
       const service = await setupSynapse(mockConfig, logger)
@@ -212,11 +207,6 @@ describe('synapse-service', () => {
       const mockConfig: SynapseSetupConfig = {
         privateKey: 'test-private-key',
         rpcUrl: 'wss://wss.calibration.node.glif.io/apigw/lotus/rpc/v1',
-        port: 3000,
-        host: '127.0.0.1',
-        databasePath: ':memory:',
-        carStoragePath: './cars',
-        logLevel: 'info',
       }
 
       const service = await setupSynapse(mockConfig, logger)
@@ -239,11 +229,6 @@ describe('synapse-service', () => {
       const mockConfig: SynapseSetupConfig = {
         privateKey: 'test-private-key',
         rpcUrl: 'wss://wss.calibration.node.glif.io/apigw/lotus/rpc/v1',
-        port: 3000,
-        host: '127.0.0.1',
-        databasePath: ':memory:',
-        carStoragePath: './cars',
-        logLevel: 'info',
       }
 
       const service = await setupSynapse(mockConfig, logger)
@@ -264,11 +249,6 @@ describe('synapse-service', () => {
       const mockConfig: SynapseSetupConfig = {
         privateKey: 'test-private-key',
         rpcUrl: 'wss://wss.calibration.node.glif.io/apigw/lotus/rpc/v1',
-        port: 3000,
-        host: '127.0.0.1',
-        databasePath: ':memory:',
-        carStoragePath: './cars',
-        logLevel: 'info',
       }
 
       const service = await setupSynapse(mockConfig, logger)
