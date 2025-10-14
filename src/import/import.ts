@@ -19,6 +19,7 @@ import {
   initializeSynapse,
   type SynapseService,
 } from '../core/synapse/index.js'
+import { parseProviderOptions } from '../utils/cli-auth.js'
 import { cancel, createSpinner, formatFileSize, intro, outro } from '../utils/cli-helpers.js'
 import { log } from '../utils/cli-logger.js'
 import type { ImportOptions, ImportResult } from './types.js'
@@ -184,6 +185,7 @@ export async function runCarImport(options: ImportOptions): Promise<ImportResult
       walletAddress,
       sessionKey,
       rpcUrl: options.rpcUrl || RPC_URLS.calibration.websocket,
+      warmStorageAddress: process.env.WARM_STORAGE_ADDRESS,
       // Other config fields not needed for import
       port: 0,
       host: '',
@@ -210,7 +212,11 @@ export async function runCarImport(options: ImportOptions): Promise<ImportResult
     // Step 6: Create storage context now that payments are validated
     spinner.start('Creating storage context...')
 
+    // Parse provider selection from CLI options and environment variables
+    const providerOptions = parseProviderOptions(options)
+
     const { storage, providerInfo } = await createStorageContext(synapse, logger, {
+      ...providerOptions,
       callbacks: {
         onProviderSelected: (provider) => {
           spinner.message(`Connecting to storage provider: ${provider.name || provider.serviceProvider}...`)

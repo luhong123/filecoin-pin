@@ -5,6 +5,7 @@ import type { Config } from './core/synapse/index.js'
 import { setupSynapse } from './core/synapse/index.js'
 import { FilecoinPinStore, type PinOptions } from './filecoin-pin-store.js'
 import type { ServiceInfo } from './server.js'
+import { parseProviderOptions } from './utils/cli-auth.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -30,12 +31,16 @@ export async function createFilecoinPinningServer(
     throw new Error('PRIVATE_KEY environment variable is required to start the pinning server')
   }
 
+  // Parse provider selection from environment variables
+  const providerOptions = parseProviderOptions()
+
   const synapseService = await setupSynapse(
     {
       ...config,
       privateKey: config.privateKey,
     },
-    logger
+    logger,
+    providerOptions
   )
 
   // Create our custom Filecoin pin store with Synapse service

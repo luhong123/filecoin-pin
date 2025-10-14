@@ -17,6 +17,7 @@ import {
   type SynapseService,
 } from '../core/synapse/index.js'
 import { cleanupTempCar, createCarFromPath } from '../core/unixfs/index.js'
+import { parseProviderOptions } from '../utils/cli-auth.js'
 import { cancel, createSpinner, formatFileSize, intro, outro } from '../utils/cli-helpers.js'
 import type { AddOptions, AddResult } from './types.js'
 
@@ -113,6 +114,7 @@ export async function runAdd(options: AddOptions): Promise<AddResult> {
       walletAddress,
       sessionKey,
       rpcUrl: options.rpcUrl || RPC_URLS.calibration.websocket,
+      warmStorageAddress: process.env.WARM_STORAGE_ADDRESS,
       // Other config fields not needed for add
       port: 0,
       host: '',
@@ -166,7 +168,11 @@ export async function runAdd(options: AddOptions): Promise<AddResult> {
     // Create storage context
     spinner.start('Creating storage context...')
 
+    // Parse provider selection from CLI options and environment variables
+    const providerOptions = parseProviderOptions(options)
+
     const { storage, providerInfo } = await createStorageContext(synapse, logger, {
+      ...providerOptions,
       callbacks: {
         onProviderSelected: (provider) => {
           spinner.message(`Connecting to storage provider: ${provider.name || provider.serviceProvider}...`)
