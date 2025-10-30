@@ -114,8 +114,12 @@ export async function runUpload(buildContext = {}) {
     throw new Error('walletPrivateKey is required for upload phase')
   }
 
-  /** @type {Partial<UploadResult>} */
-  let { pieceCid, pieceId, dataSetId, provider, previewUrl, network } = {}
+  /**
+   * @type {Partial<UploadResult>}
+   * This is a simple trick to get each of these variables defined easily without using a separate let statement and jsdoc for each one.
+   * We already have them in the type we want.
+   */
+  let { pieceCid, pieceId, dataSetId, provider, previewUrl, network, ipniValidated } = {}
   /** @type {PaymentStatus} */
   let paymentStatus
 
@@ -178,6 +182,7 @@ export async function runUpload(buildContext = {}) {
     provider = uploadResult.provider
     previewUrl = uploadResult.previewUrl
     network = uploadResult.network
+    ipniValidated = uploadResult.ipniValidated
   }
 
   const uploadStatus = dryRun ? 'dry-run' : 'uploaded'
@@ -194,6 +199,7 @@ export async function runUpload(buildContext = {}) {
     uploadStatus,
     paymentStatus,
     dryRun,
+    ipniValidated,
   })
 
   provider = providerInfo
