@@ -3,7 +3,7 @@
 This document explains how the action works internally and why each step exists.
 
 ## High-Level Execution
-
+##aaaa
 1. **run.mjs** is the entry point. It:
    - Creates a GitHub check run to track progress.
    - Calls `runBuild()` to create the CAR file.
